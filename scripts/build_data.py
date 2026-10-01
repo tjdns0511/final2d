@@ -21,7 +21,10 @@ class TableParser(HTMLParser):
         if t=="table" and "wikitable" in d.get("class",""): self.in_table=True
         elif self.in_table and t=="tr": self.in_tr=True;self.row=[]
         elif self.in_tr and t in ("td","th"): self.in_cell=True;self.cell="";self.href=None
-        elif self.in_cell and t=="a" and d.get("href","").startswith("./"): self.href=d["href"][2:]
+        elif self.in_cell and t=="a":
+            h=d.get("href","")
+            if h.startswith("./"): self.href=h[2:]
+            elif h.startswith("/wiki/"): self.href=h[6:]
     def handle_data(self,d):
         if self.in_cell:self.cell+=d
     def handle_endtag(self,t):
