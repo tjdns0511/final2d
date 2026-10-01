@@ -1,6 +1,10 @@
 name: Update war data
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - "scripts/build_data.py"
+      - ".github/workflows/update-data.yml"
   schedule:
     - cron: "17 3 * * 1"
 permissions:
