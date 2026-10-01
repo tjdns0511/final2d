@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import json,re,time,urllib.parse,urllib.request
+import json,re,time,urllib.parse,urllib.request,urllib.error,random
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -7,8 +7,14 @@ UA="WarAtlas/1.0 (historical visualization; GitHub tjdns0511/final2d)"
 LISTS=["List of wars: before 1000","List of wars: 1000–1499","List of wars: 1500–1799","List of wars: 1800–1899","List of wars: 1900–1944","List of wars: 1945–1989","List of wars: 1990–2002","List of wars: 2003–present"]
 
 def get(url):
-    q=urllib.request.Request(url,headers={"User-Agent":UA,"Api-User-Agent":UA})
-    with urllib.request.urlopen(q,timeout=45) as r:return json.load(r)
+    for attempt in range(7):
+        q=urllib.request.Request(url,headers={"User-Agent":UA,"Api-User-Agent":UA})
+        try:
+            with urllib.request.urlopen(q,timeout=60) as r:return json.load(r)
+        except urllib.error.HTTPError as e:
+            if e.code not in (429,500,502,503,504) or attempt==6: raise
+            wait=min(60,2**attempt)+random.random()
+            print("HTTP",e.code,"retry in",round(wait,1),"s",flush=True);time.sleep(wait)
 def api(params):
     params["format"]="json";params["formatversion"]="2"
     return get("https://en.wikipedia.org/w/api.php?"+urllib.parse.urlencode(params))
@@ -58,7 +64,7 @@ def collect_titles():
             if st is None or st < -2500:continue
             en=years[1] if len(years)>1 and years[1] is not None else st
             titles.setdefault(title,{"start":st,"end":en})
-        time.sleep(.15)
+        time.sleep(.7)
     return titles
 def claims_for(titles):
     out={}
@@ -71,7 +77,7 @@ def claims_for(titles):
         if not qids:continue
         wd=get("https://www.wikidata.org/w/api.php?"+urllib.parse.urlencode({"action":"wbgetentities","ids":"|".join(qids),"props":"claims|labels|sitelinks","languages":"en","sitefilter":"enwiki","format":"json"}))
         for q,e in wd["entities"].items():out[q]=e
-        time.sleep(.12)
+        time.sleep(1.0)
     return out
 def amount(c):
     try:return float(c["mainsnak"]["datavalue"]["value"]["amount"].lstrip("+"))
